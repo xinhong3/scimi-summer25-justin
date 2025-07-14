@@ -1,0 +1,8 @@
+class P(process):
+  def setup():
+    pass
+  def run():
+    pass
+
+def main():
+  output("hello world!")
