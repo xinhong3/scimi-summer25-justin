@@ -1,0 +1,57 @@
+class Coordinator(process):
+    def setup(
+        cohort: set # pass in cohort, which is a set of participants to the coordinator.
+    ):
+        pass
+    def run():      # invoked after setup
+
+        # Coordinator sends prepare message to participants
+
+        output("coordinator sends prepare.")
+        send(('prepare'), to = cohort)
+
+        # Coordinator waits:
+        # 1. all participants say prepared -> sends commit
+        # 2. some participants say abort   -> sends abort
+        
+        # wait for the number of processes that sends 'prepare' to be the number of cohort.
+        if await (len(setof(p, received(('prepared'), from_ = p))) == len(cohort)):      # the number of processes that sends 'prepare'
+            output("coordinator sends commit.")
+            send(('commit'), to = cohort)
+        elif some(received(('abort'), from_ = cohort)):
+            output("coordinator sends abort.")
+            send(('abort'), to = cohort)
+
+class Participant(process):
+    def setup(
+        coor: set   # coordinator
+    ):
+        pass
+    def run():      # invoked after setup
+        
+        await some(received(('prepare'), from_ = coor))
+        
+        output("prepared")
+        send(('prepared'), to= coor)
+
+        # Wait for either commit or abort
+
+        if await some(received(('commit'), from_ = coor)):
+            output('participant commit.')               # do commit
+        elif some(received(('abort'), from_ = coor)):
+            output('participant abort.')                # do abort
+
+
+def main():
+    output("main started")
+    # main to start the program.
+    c = new(Coordinator, num= 1)
+    cohort = new(Participant, num= 3)           # cohort is a set of process
+    output(f'c = {c}, cohort = {cohort}.')
+
+    setup(c, (cohort, ))
+    setup(cohort, (c, ))
+
+    start(c)
+    start(cohort)
+    output("main finished")
